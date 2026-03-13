@@ -8,49 +8,47 @@ This document describes the current infrastructure environment, the software sta
 
 # **Infrastructure**
 
-## **Cloud Hosting — Vultr**
+## **Cloud Hosting - Vultr**
 
 The compute layer is hosted on Vultr. A single virtual machine instance running Ubuntu 24.04 LTS serves as the host for all application components. The instance does not use the Vultr Marketplace OpenClaw pre-built image; Ubuntu 24.04 was selected as a clean base image, with all software installed manually after provisioning.
 
-The instance is deployed within a Vultr VPC (Virtual Private Cloud). It does not have a public IP address directly attached; instead, outbound internet traffic is routed through a NAT gateway. This means the instance is not directly reachable from the public internet on any port. All outbound connections — including API calls to OVH and WebSocket connections to Discord — traverse the NAT gateway normally.
+The instance is deployed within a Vultr VPC (Virtual Private Cloud) and does have a public IP address attached. That public IP exists so the host can be reached without an intermediate bastion or tunnel, but the security model remains private-first: only the minimum inbound ports required for administration and the OpenClaw gateway are opened, and those ports are restricted to the public IP address of the user's local machine by Vultr firewall rules and host-level firewall policy. Graphiti and its backing graph database remain private services and are never exposed on the public interface. All other external relationships in the system - including API calls to OVH and WebSocket connections to Discord - are outbound from the instance.
 
-## **DNS — Cloudflare**
+## **DNS - Cloudflare**
 
-DNS is managed through Cloudflare. But the domain was transferred to Cloudflare from [https://orangewebsite.com](https://orangewebsite.com). 
+DNS is managed through Cloudflare. The domain's authoritative nameservers already point at Cloudflare; no registrar migration work is needed here beyond maintaining the correct DNS records in the Cloudflare zone. The earlier provider, [https://orangewebsite.com](https://orangewebsite.com), is no longer the active DNS control plane.
 
-The intention is for a domain (or subdomain) managed in Cloudflare to resolve to the OpenClaw gateway, making the control interface accessible via a human-readable URL rather than requiring direct IP access or an SSH tunnel. Cloudflare sits in front of the instance and handles DNS resolution for that domain.
-
-The relationship between Cloudflare and the Vultr VPC requires consideration because the instance has no public IP of its own. Traffic originating from outside the VPC cannot reach the instance directly; any inbound path through Cloudflare would need to be routed appropriately given the NAT and VPC topology.
+The intention is for a domain or subdomain managed in Cloudflare to resolve to the OpenClaw gateway, making the control interface accessible via a human-readable URL rather than requiring direct IP access. In this setup Cloudflare is primarily the authoritative DNS provider, not the trust boundary by itself. The actual access restriction is enforced at the Vultr and host firewall layers by allowing inbound gateway traffic only from the user's local public IP address. In practice, Cloudflare just needs the appropriate `A` or `AAAA` record for the gateway hostname pointing at the Vultr instance's public address, while the origin stays locked down to the user's source IP.
 
 # **Software Stack**
 
-## **OpenClaw — Agent Platform**
+## **OpenClaw - Agent Platform**
 
-OpenClaw is the central application being deployed. It is an open-source autonomous AI agent platform that operates as a persistent, always-on service on the server. It is installed directly on the Ubuntu host via npm as a global package — not inside a Docker container. It runs as a systemd service so that it starts automatically on boot and is managed consistently with other system services.
+OpenClaw is the central application being deployed. It is an open-source autonomous AI agent platform that operates as a persistent, always-on service on the server. It is installed directly on the Ubuntu host via npm as a global package - not inside a Docker container. It runs as a systemd service so that it starts automatically on boot and is managed consistently with other system services.
 
-OpenClaw exposes a gateway — a local web server that provides a control UI and API surface for interacting with and configuring the agent. This gateway is the component intended to be pointed at by the Cloudflare DNS entry. In its default and recommended configuration, the gateway binds to localhost only and is not directly exposed to any network interface.
+OpenClaw exposes a gateway - a web server that provides a control UI and API surface for interacting with and configuring the agent. This gateway is the component intended to be pointed at by the Cloudflare DNS entry. In this deployment, the gateway is the only application surface permitted to listen beyond localhost, and even then it is not meant to be globally reachable: inbound access is constrained to the user's local machine by source-IP allowlisting at the network perimeter. If the user's public IP changes, the firewall allowlist must be updated before access will work again.
 
 OpenClaw uses a plugin system for extending its capabilities. The Graphiti plugin is installed to provide the agent with persistent knowledge graph memory. OpenClaw also supports multiple messaging channel integrations; in this deployment, Discord is the configured channel through which the agent is accessed and commanded.
 
-## **Discord — Messaging Channel**
+## **Discord - Messaging Channel**
 
-Discord is the interface through which the user interacts with the OpenClaw agent. A Discord bot application is registered in the Discord Developer Portal and its credentials are configured within OpenClaw. The bot operates by maintaining a persistent outbound WebSocket connection from the OpenClaw process to Discord's gateway servers — meaning Discord does not make any inbound connections to the Vultr instance. All message traffic flows outbound from the server.
+Discord is the interface through which the user interacts with the OpenClaw agent. A Discord bot application is registered in the Discord Developer Portal and its credentials are configured within OpenClaw. The bot operates by maintaining a persistent outbound WebSocket connection from the OpenClaw process to Discord's gateway servers - meaning Discord does not make any inbound connections to the Vultr instance. All message traffic flows outbound from the server.
 
 The bot is scoped to a specific Discord server (guild) and channel, with an allowlist restricting which users are permitted to send it commands. The Message Content Intent is enabled, as OpenClaw requires the ability to read message content to function.
 
-## **Graphiti — Knowledge Graph Memory**
+## **Graphiti - Knowledge Graph Memory Service**
 
 Graphiti provides OpenClaw with persistent, temporally-aware memory in the form of a knowledge graph. Rather than storing conversation context as flat files, Graphiti builds a structured graph of entities and relationships extracted from conversations, tracking how facts evolve over time. This gives the agent a coherent, queryable view of accumulated knowledge across all sessions.
 
-Graphiti runs as a Docker container on the same Vultr instance as OpenClaw. It exposes an HTTP API on localhost that the OpenClaw Graphiti plugin communicates with. Graphiti itself does not run on Docker by design choice for OpenClaw — only Graphiti and its dependency, Neo4j, are containerized.
+Graphiti runs as a Docker container on the same Vultr instance as OpenClaw. It exposes an HTTP API only on the private host or container network that the OpenClaw Graphiti plugin communicates with. OpenClaw itself remains installed directly on the Ubuntu host rather than in Docker; only Graphiti and its dependency, FalkorDB, are containerized.
 
 Graphiti uses the OVH AI Endpoints service for two distinct operations: LLM inference (to extract entities and relationships from conversation text) and text embeddings (to generate vectors for knowledge graph search and retrieval). It is therefore a consumer of OVH AI Endpoints in its own right, independently of OpenClaw's own model usage.
 
-## **Neo4j — Graph Database**
+## **FalkorDB - Graph Database**
 
-Neo4j is the underlying graph database in which Graphiti stores its knowledge graph. It runs as a Docker container on the same Vultr instance, alongside the Graphiti container. Neo4j is not exposed to any external network interface; it is accessible only within the Docker network and from localhost. The APOC plugin is enabled within Neo4j, as Graphiti depends on it for certain graph traversal operations. Data is persisted in a named Docker volume so that the knowledge graph survives container restarts and redeployments.
+FalkorDB is the underlying graph database in which Graphiti stores its knowledge graph. It runs as a Docker container on the same Vultr instance, alongside the Graphiti container. FalkorDB is not exposed to any external network interface; it is reachable only across the private Docker network and, if needed for maintenance, from the local host itself. Data is persisted in a named Docker volume so that the knowledge graph survives container restarts and redeployments. Replacing Neo4j with FalkorDB reduces the number of publicly relevant moving parts while keeping the graph-memory layer isolated from the internet.
 
-# **AI Inference — OVH AI Endpoints**
+# **AI Inference - OVH AI Endpoints**
 
 OVH AI Endpoints is the provider for all AI model inference in this deployment. It serves two roles: language model inference (generating responses, making tool-use decisions, reasoning through tasks) and text embedding generation (producing vector representations of text for semantic search and memory retrieval).
 
@@ -68,11 +66,10 @@ The following describes how the components relate to one another at runtime:
 
 * OpenClaw, running as a systemd service on the Vultr instance, receives the message over its persistent outbound WebSocket connection to Discord.
 
-* OpenClaw constructs a prompt, optionally enriched with context retrieved from Graphiti via the localhost Graphiti API, and sends an inference request to OVH AI Endpoints.
+* OpenClaw constructs a prompt, optionally enriched with context retrieved from Graphiti via the private Graphiti API, and sends an inference request to OVH AI Endpoints.
 
 * OVH AI Endpoints returns a response (potentially including tool-use instructions), which OpenClaw acts on.
 
-* If the conversation produces new information worth retaining, the Graphiti plugin captures it: Graphiti calls OVH AI Endpoints to extract entities and generate embeddings, then writes the resulting graph data into Neo4j.
+* If the conversation produces new information worth retaining, the Graphiti plugin captures it: Graphiti calls OVH AI Endpoints to extract entities and generate embeddings, then writes the resulting graph data into FalkorDB.
 
-* The OpenClaw gateway, bound to localhost on the Vultr instance, is intended to be reachable via a domain managed in Cloudflare DNS, providing access to the control UI.
-
+* The OpenClaw gateway is reachable via a domain managed in Cloudflare DNS, but only from the user's local machine because the instance firewall allows inbound gateway traffic solely from that source IP.
