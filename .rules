@@ -1,0 +1,111 @@
+# TypeScript coding guidelines
+
+* Prioritize correctness, readability, and maintainability. Performance is secondary unless explicitly required.
+* Do not add organizational comments or comments that merely restate what the code does. Comments should only explain *why* something is done when the reasoning is non-obvious.
+* Prefer implementing functionality in existing files unless the work is a genuinely new logical component. Avoid creating many tiny files.
+* Avoid creative additions unless explicitly requested.
+* Use full words for variable names. Avoid abbreviations like `q`, `res`, or `ctx` unless they are already conventional and unambiguous in the surrounding codebase.
+* Prefer explicit, predictable control flow over clever abstractions.
+* Prefer small, composable functions, but do not split code so aggressively that the logic becomes harder to follow.
+* Keep public interfaces narrow and well-typed. Prefer reducing surface area over exposing flexible but weakly constrained APIs.
+* Prefer `const` by default. Use `let` only when reassignment is necessary.
+* Avoid mutable shared state unless there is a clear reason for it.
+* Prefer early returns to deeply nested conditionals.
+
+## Type safety
+
+* Prefer precise types over broad types.
+* Avoid `any`. Use `unknown` when a value is truly unknown, then narrow it explicitly.
+* Avoid unchecked type assertions (`as SomeType`) unless there is no better option. Prefer type guards, schema validation, or narrowing.
+* Avoid non-null assertions (`!`) unless the invariant is guaranteed and documented by surrounding code.
+* Model invalid states out of existence when practical by using discriminated unions and well-structured types.
+* Prefer explicit return types on exported functions and other important boundaries.
+* Prefer shared domain types over duplicating similar inline object types across files.
+* When dealing with external input, validate at the boundary rather than trusting inferred types.
+
+## Errors
+
+* Do not silently discard errors.
+* Never ignore rejected promises. Handle them explicitly with `await`, `.catch(...)`, or structured error propagation.
+* If an operation can fail, either:
+  - propagate the error to the caller,
+  - transform it into a clear domain error, or
+  - log/report it intentionally when failure is non-fatal.
+* Use `try`/`catch` only when you can add meaningful handling. Do not wrap code in `try`/`catch` just to suppress failures.
+* Preserve useful error context when rethrowing.
+* Ensure async failures can reach the UI, API response, or caller in a form that produces meaningful feedback.
+
+## Async and concurrency
+
+* Prefer `async`/`await` over raw promise chains for readability unless the chain is clearly simpler.
+* When running multiple independent async operations, use `Promise.all` or `Promise.allSettled` intentionally rather than awaiting serially.
+* Be explicit about cancellation, timeouts, and cleanup for long-running async work.
+* Avoid fire-and-forget async calls unless they are genuinely safe to detach. If detaching, ensure errors are still observable.
+* Scope copied values and closures as tightly as possible in async code to make ownership and timing easier to follow.
+* Be careful with race conditions around shared mutable state, caches, request deduplication, and UI updates.
+
+## Nullability and data access
+
+* Treat `null` and `undefined` distinctly when the distinction matters. Do not mix them casually.
+* Prefer optional chaining and nullish coalescing when they make intent clearer, but do not use them to hide missing-data bugs.
+* Be careful with array indexing, object lookups, and map access that may produce `undefined`.
+* Validate assumptions at boundaries instead of relying on downstream code to fail later.
+
+## Project structure
+
+* Prefer modifying existing modules over introducing new abstractions prematurely.
+* Create new files only when they represent a meaningful new responsibility.
+* Avoid barrel files unless they clearly improve ergonomics without obscuring ownership or creating circular dependencies.
+* Keep framework-specific code, domain logic, and infrastructure concerns separated where practical.
+* Put reusable logic in shared utilities only after there is clear reuse, not speculative reuse.
+
+## APIs and data boundaries
+
+* Validate external data at runtime when it crosses trust boundaries, especially for HTTP requests, environment variables, local storage, database payloads, and third-party APIs.
+* Prefer explicit parsing and validation libraries where appropriate.
+* Keep transport-layer shapes separate from domain-layer shapes when that improves clarity.
+* Do not leak raw third-party API responses deep into the codebase if a stable internal type can be introduced.
+
+## Framework and UI guidance
+
+* Keep components focused. Move non-UI business logic out of rendering code when it improves clarity.
+* Do not derive state that can be computed from props or existing state during render unless memoization is actually needed.
+* Be careful with effects, subscriptions, and timers. Clean them up correctly.
+* Avoid unnecessary re-renders caused by unstable object/function identities when it materially affects correctness or performance.
+* Ensure loading, empty, error, and success states are handled explicitly in user-facing flows.
+* Surface meaningful errors to users instead of failing silently.
+
+## Testing
+
+* Test observable behavior and important edge cases, not implementation trivia.
+* Prefer deterministic tests. Control time, randomness, and network access where possible.
+* Use fake timers when testing timer-driven logic if the test runner/framework supports them.
+* Avoid sleeps and arbitrary delays in tests except as a last resort.
+* Keep test setup minimal and local to the behavior under test.
+* When mocking, mock at stable boundaries rather than deep internal details.
+
+## Build and lint hygiene
+
+* Keep the project free of type errors and linter errors.
+* Run the project’s standard lint, typecheck, and test commands before considering work complete.
+* Prefer fixing the root cause over suppressing lint or type errors.
+* Do not disable rules without a clear, local justification.
+
+# Pull request hygiene
+
+When an agent opens or updates a pull request, it must:
+
+- Use a clear, correctly capitalized, imperative PR title (for example, `Fix search dropdown keyboard navigation`).
+- Avoid conventional commit prefixes in PR titles (`fix:`, `feat:`, `docs:`, etc.).
+- Avoid trailing punctuation in PR titles.
+- Optionally prefix the title with the package or app name when one scope is clearly affected (for example, `web: Improve dashboard loading state`).
+- Include a `Release Notes:` section as the final section in the PR body.
+- Use one bullet under `Release Notes:`:
+  - `- Added ...`, `- Fixed ...`, or `- Improved ...` for user-facing changes, or
+  - `- N/A` for docs-only and other non-user-facing changes.
+- Format release notes exactly with a blank line after the heading, for example:
+
+```md
+Release Notes:
+
+- N/A

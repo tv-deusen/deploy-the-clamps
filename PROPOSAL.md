@@ -2,13 +2,9 @@
 
 ## Overview
 
-This system is configured entirely through declarative YAML files. There are no manual service setup steps, no imperative CLI commands to remember, and no "magic" configuration state that only exists in memory or in scattered env files. Everything the system does is described in code, version-controlled, auditable, and reproducible from a single source of truth.
-
 The architecture is a layered stack where each layer's behavior is declared via config files that get validated, compiled, and deployed as immutable units. Pre-deployment, the config is validated and optimized. At runtime, changes to config files trigger zero-downtime hot reloads where supported.
 
 ## Declarative-First Philosophy
-
-A declarative system describes **what should be running**, not **how to run it**. The operator writes config files describing the desired state, and the system converges to that state autonomously.
 
 **Principles:**
 - **Single source of truth**: All configuration lives in version-controlled YAML files
@@ -32,12 +28,6 @@ Your machine
        → Graphiti REST API (memory, on private Docker network)
             → FalkorDB (graph database, on private Docker network)
 ```
-
-**Why this shape:**
-- Flexibility: Each boundary is independently replaceable
-- Stability: Hot path is simple; minimal cross-service hops
-- Performance: Co-located services avoid remote DB latency
-- Security: Public surface is minimal; private services stay internal
 
 ## Declarative Configuration Files
 
@@ -67,9 +57,9 @@ deploy/
 └── .gitignore                  # Excludes secrets, local state
 ```
 
-## Pre-Deployment: Configuration as Code
+## Pre-Deployment
 
-Before a single service starts, the entire system is declared in YAML and validated.
+The entire system is declared in YAML and validated.
 
 ### system.yaml — Runtime Environment
 
