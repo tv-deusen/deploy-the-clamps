@@ -38,9 +38,11 @@ The system is designed for:
 ## Architectural Principles
 
 ### Declarative-first
+
 The user declares desired state in YAML. The engine computes the actions required to reach that state.
 
 ### Compiler and reconciler model
+
 The system behaves like a compiler followed by a reconciler:
 
 1. load configuration
@@ -52,6 +54,7 @@ The system behaves like a compiler followed by a reconciler:
 7. verify resulting state
 
 ### Explicit trust boundaries
+
 All external input is validated at the boundary:
 
 - YAML files
@@ -62,12 +65,15 @@ All external input is validated at the boundary:
 - remote service health responses
 
 ### Narrow interfaces
+
 Provider implementations expose a small, predictable contract. The planner and compiler operate on internal types rather than provider-specific response shapes.
 
 ### Idempotency
+
 Repeated `apply` operations against unchanged input should converge to no-op behavior.
 
 ### Security by default
+
 Secrets are resolved as late as practical, redacted in output, and excluded from state persistence. Public exposure is explicit, not incidental.
 
 ---
@@ -555,27 +561,27 @@ The following interfaces define the intended internal contracts for the first ve
 
 ```ts
 export type Result<Value, ErrorValue> =
-	| { ok: true; value: Value }
-	| { ok: false; error: ErrorValue };
+ | { ok: true; value: Value }
+ | { ok: false; error: ErrorValue };
 
 export interface Diagnostic {
-	readonly code: string;
-	readonly message: string;
-	readonly severity: 'error' | 'warning';
-	readonly path?: string;
-	readonly detail?: string;
+ readonly code: string;
+ readonly message: string;
+ readonly severity: 'error' | 'warning';
+ readonly path?: string;
+ readonly detail?: string;
 }
 
 export class DomainError extends Error {
-	public readonly code: string;
-	public readonly causeValue?: unknown;
+ public readonly code: string;
+ public readonly causeValue?: unknown;
 
-	public constructor(code: string, message: string, causeValue?: unknown) {
-		super(message);
-		this.name = 'DomainError';
-		this.code = code;
-		this.causeValue = causeValue;
-	}
+ public constructor(code: string, message: string, causeValue?: unknown) {
+  super(message);
+  this.name = 'DomainError';
+  this.code = code;
+  this.causeValue = causeValue;
+ }
 }
 ```
 
@@ -583,94 +589,94 @@ export class DomainError extends Error {
 
 ```ts
 export interface DeploymentConfigSet {
-	readonly deploymentName: string;
-	readonly environmentName: string;
-	readonly documents: readonly ConfigDocument[];
-	readonly providers: readonly ProviderConfig[];
-	readonly services: readonly ServiceConfig[];
-	readonly workers: readonly WorkerConfig[];
-	readonly network: NetworkConfig | null;
-	readonly memory: MemoryConfig | null;
+ readonly deploymentName: string;
+ readonly environmentName: string;
+ readonly documents: readonly ConfigDocument[];
+ readonly providers: readonly ProviderConfig[];
+ readonly services: readonly ServiceConfig[];
+ readonly workers: readonly WorkerConfig[];
+ readonly network: NetworkConfig | null;
+ readonly memory: MemoryConfig | null;
 }
 
 export interface ConfigDocument {
-	readonly kind: string;
-	readonly version: string;
-	readonly sourcePath: string;
-	readonly rawValue: unknown;
+ readonly kind: string;
+ readonly version: string;
+ readonly sourcePath: string;
+ readonly rawValue: unknown;
 }
 
 export interface ProviderConfig {
-	readonly name: string;
-	readonly kind: ProviderKind;
-	readonly options: Record<string, unknown>;
+ readonly name: string;
+ readonly kind: ProviderKind;
+ readonly options: Record<string, unknown>;
 }
 
 export type ProviderKind =
-	| 'vultr'
-	| 'cloudflare'
-	| 'host'
-	| 'ovh'
-	| 'discord';
+ | 'vultr'
+ | 'cloudflare'
+ | 'host'
+ | 'ovh'
+ | 'discord';
 
 export interface ServiceConfig {
-	readonly name: string;
-	readonly kind: ServiceKind;
-	readonly enabled: boolean;
-	readonly settings: Record<string, unknown>;
-	readonly dependsOn: readonly string[];
+ readonly name: string;
+ readonly kind: ServiceKind;
+ readonly enabled: boolean;
+ readonly settings: Record<string, unknown>;
+ readonly dependsOn: readonly string[];
 }
 
 export type ServiceKind =
-	| 'openclaw'
-	| 'graphiti'
-	| 'falkordb'
-	| 'caddy';
+ | 'openclaw'
+ | 'graphiti'
+ | 'falkordb'
+ | 'caddy';
 
 export interface WorkerConfig {
-	readonly name: string;
-	readonly enabled: boolean;
-	readonly scriptPath: string;
-	readonly socketPath: string | null;
-	readonly resourcePolicy: WorkerResourcePolicy | null;
+ readonly name: string;
+ readonly enabled: boolean;
+ readonly scriptPath: string;
+ readonly socketPath: string | null;
+ readonly resourcePolicy: WorkerResourcePolicy | null;
 }
 
 export interface WorkerResourcePolicy {
-	readonly memoryLimitMegabytes: number | null;
-	readonly cpuQuotaPercent: number | null;
+ readonly memoryLimitMegabytes: number | null;
+ readonly cpuQuotaPercent: number | null;
 }
 
 export interface NetworkConfig {
-	readonly publicHostnames: readonly PublicHostnameConfig[];
-	readonly firewallRules: readonly FirewallRuleConfig[];
+ readonly publicHostnames: readonly PublicHostnameConfig[];
+ readonly firewallRules: readonly FirewallRuleConfig[];
 }
 
 export interface PublicHostnameConfig {
-	readonly hostname: string;
-	readonly target: HostnameTarget;
+ readonly hostname: string;
+ readonly target: HostnameTarget;
 }
 
 export type HostnameTarget =
-	| { readonly type: 'instance-public-ip'; readonly instanceName: string }
-	| { readonly type: 'literal-ip'; readonly ipAddress: string };
+ | { readonly type: 'instance-public-ip'; readonly instanceName: string }
+ | { readonly type: 'literal-ip'; readonly ipAddress: string };
 
 export interface FirewallRuleConfig {
-	readonly name: string;
-	readonly protocol: 'tcp' | 'udp';
-	readonly portRange: string;
-	readonly sourceRanges: readonly string[];
-	readonly targetInstanceName: string;
+ readonly name: string;
+ readonly protocol: 'tcp' | 'udp';
+ readonly portRange: string;
+ readonly sourceRanges: readonly string[];
+ readonly targetInstanceName: string;
 }
 
 export interface MemoryConfig {
-	readonly enabled: boolean;
-	readonly graphitiUrl: string | null;
-	readonly providerModelNames: MemoryModelNames;
+ readonly enabled: boolean;
+ readonly graphitiUrl: string | null;
+ readonly providerModelNames: MemoryModelNames;
 }
 
 export interface MemoryModelNames {
-	readonly extractionModel: string | null;
-	readonly embeddingModel: string | null;
+ readonly extractionModel: string | null;
+ readonly embeddingModel: string | null;
 }
 ```
 
@@ -678,18 +684,18 @@ export interface MemoryModelNames {
 
 ```ts
 export type SecretReference =
-	| {
-			readonly type: 'environment';
-			readonly variableName: string;
-	  }
-	| {
-			readonly type: 'inline';
-			readonly value: string;
-	  };
+ | {
+   readonly type: 'environment';
+   readonly variableName: string;
+   }
+ | {
+   readonly type: 'inline';
+   readonly value: string;
+   };
 
 export interface SecretResolver {
-	public readonly kind: string;
-	resolve(reference: SecretReference): Promise<string>;
+ public readonly kind: string;
+ resolve(reference: SecretReference): Promise<string>;
 }
 ```
 
@@ -699,56 +705,56 @@ The `inline` variant may exist for testing or controlled local development, but 
 
 ```ts
 export interface DeploymentModel {
-	readonly metadata: DeploymentMetadata;
-	readonly resources: readonly ResourceDefinition[];
-	readonly generatedArtifacts: readonly GeneratedArtifact[];
+ readonly metadata: DeploymentMetadata;
+ readonly resources: readonly ResourceDefinition[];
+ readonly generatedArtifacts: readonly GeneratedArtifact[];
 }
 
 export interface DeploymentMetadata {
-	readonly deploymentName: string;
-	readonly environmentName: string;
-	readonly configDigest: string;
-	readonly createdAtIso: string;
+ readonly deploymentName: string;
+ readonly environmentName: string;
+ readonly configDigest: string;
+ readonly createdAtIso: string;
 }
 
 export interface ResourceDefinition {
-	readonly id: ResourceId;
-	readonly kind: ResourceKind;
-	readonly providerKind: ProviderKind;
-	readonly desiredState: unknown;
-	readonly dependencies: readonly ResourceId[];
-	readonly lifecycle: ResourceLifecycle;
-	readonly healthCheck: HealthCheckDefinition | null;
+ readonly id: ResourceId;
+ readonly kind: ResourceKind;
+ readonly providerKind: ProviderKind;
+ readonly desiredState: unknown;
+ readonly dependencies: readonly ResourceId[];
+ readonly lifecycle: ResourceLifecycle;
+ readonly healthCheck: HealthCheckDefinition | null;
 }
 
 export type ResourceId = string;
 
 export type ResourceKind =
-	| 'vultr-instance'
-	| 'vultr-firewall-group'
-	| 'cloudflare-dns-record'
-	| 'host-directory'
-	| 'host-file'
-	| 'docker-network'
-	| 'docker-volume'
-	| 'docker-compose-stack'
-	| 'systemd-unit'
-	| 'service-binding';
+ | 'vultr-instance'
+ | 'vultr-firewall-group'
+ | 'cloudflare-dns-record'
+ | 'host-directory'
+ | 'host-file'
+ | 'docker-network'
+ | 'docker-volume'
+ | 'docker-compose-stack'
+ | 'systemd-unit'
+ | 'service-binding';
 
 export interface ResourceLifecycle {
-	readonly deletionPolicy: 'delete' | 'retain';
-	readonly replaceOnChangeFields: readonly string[];
-	readonly applyStrategy: 'immediate' | 'rolling' | 'recreate';
+ readonly deletionPolicy: 'delete' | 'retain';
+ readonly replaceOnChangeFields: readonly string[];
+ readonly applyStrategy: 'immediate' | 'rolling' | 'recreate';
 }
 
 export interface GeneratedArtifact {
-	readonly id: string;
-	readonly path: string;
-	readonly content: string;
-	readonly contentHash: string;
-	readonly owner: string | null;
-	readonly group: string | null;
-	readonly mode: string | null;
+ readonly id: string;
+ readonly path: string;
+ readonly content: string;
+ readonly contentHash: string;
+ readonly owner: string | null;
+ readonly group: string | null;
+ readonly mode: string | null;
 }
 ```
 
@@ -756,37 +762,37 @@ export interface GeneratedArtifact {
 
 ```ts
 export interface HealthCheckDefinition {
-	readonly kind: 'http' | 'tcp' | 'command' | 'systemd';
-	readonly timeoutMilliseconds: number;
-	readonly intervalMilliseconds: number;
-	readonly retries: number;
-	readonly target: HealthTarget;
+ readonly kind: 'http' | 'tcp' | 'command' | 'systemd';
+ readonly timeoutMilliseconds: number;
+ readonly intervalMilliseconds: number;
+ readonly retries: number;
+ readonly target: HealthTarget;
 }
 
 export type HealthTarget =
-	| {
-			readonly type: 'http';
-			readonly url: string;
-			readonly expectedStatusCodes: readonly number[];
-	  }
-	| {
-			readonly type: 'tcp';
-			readonly host: string;
-			readonly port: number;
-	  }
-	| {
-			readonly type: 'command';
-			readonly command: readonly string[];
-	  }
-	| {
-			readonly type: 'systemd';
-			readonly unitName: string;
-	  };
+ | {
+   readonly type: 'http';
+   readonly url: string;
+   readonly expectedStatusCodes: readonly number[];
+   }
+ | {
+   readonly type: 'tcp';
+   readonly host: string;
+   readonly port: number;
+   }
+ | {
+   readonly type: 'command';
+   readonly command: readonly string[];
+   }
+ | {
+   readonly type: 'systemd';
+   readonly unitName: string;
+   };
 
 export interface HealthCheckResult {
-	readonly resourceId: ResourceId;
-	readonly healthy: boolean;
-	readonly message: string;
+ readonly resourceId: ResourceId;
+ readonly healthy: boolean;
+ readonly message: string;
 }
 ```
 
@@ -794,41 +800,41 @@ export interface HealthCheckResult {
 
 ```ts
 export interface ProviderContext {
-	readonly logger: Logger;
-	readonly stateStore: StateStore;
-	readonly secretResolver: SecretResolver;
-	readonly runId: string;
-	readonly nowIso: string;
+ readonly logger: Logger;
+ readonly stateStore: StateStore;
+ readonly secretResolver: SecretResolver;
+ readonly runId: string;
+ readonly nowIso: string;
 }
 
 export interface ProviderCapabilities {
-	readonly supportedResourceKinds: readonly ResourceKind[];
-	readonly supportsDeletion: boolean;
-	readonly supportsDiscovery: boolean;
+ readonly supportedResourceKinds: readonly ResourceKind[];
+ readonly supportsDeletion: boolean;
+ readonly supportsDiscovery: boolean;
 }
 
 export interface Provider<ResourceState = unknown, ProviderOutput = unknown> {
-	readonly kind: ProviderKind;
-	readonly capabilities: ProviderCapabilities;
+ readonly kind: ProviderKind;
+ readonly capabilities: ProviderCapabilities;
 
-	validateConfig(
-		config: ProviderConfig,
-	): Promise<readonly Diagnostic[]>;
+ validateConfig(
+  config: ProviderConfig,
+ ): Promise<readonly Diagnostic[]>;
 
-	discover(
-		resourceDefinitions: readonly ResourceDefinition[],
-		context: ProviderContext,
-	): Promise<readonly DiscoveredResource<ResourceState>[]>;
+ discover(
+  resourceDefinitions: readonly ResourceDefinition[],
+  context: ProviderContext,
+ ): Promise<readonly DiscoveredResource<ResourceState>[]>;
 
-	plan(
-		input: ProviderPlanInput<ResourceState>,
-		context: ProviderContext,
-	): Promise<readonly PlannedAction[]>;
+ plan(
+  input: ProviderPlanInput<ResourceState>,
+  context: ProviderContext,
+ ): Promise<readonly PlannedAction[]>;
 
-	apply(
-		action: PlannedAction,
-		context: ProviderContext,
-	): Promise<ProviderApplyResult<ProviderOutput>>;
+ apply(
+  action: PlannedAction,
+  context: ProviderContext,
+ ): Promise<ProviderApplyResult<ProviderOutput>>;
 }
 ```
 
@@ -836,43 +842,43 @@ export interface Provider<ResourceState = unknown, ProviderOutput = unknown> {
 
 ```ts
 export interface DiscoveredResource<ResourceState = unknown> {
-	readonly resourceId: ResourceId;
-	readonly kind: ResourceKind;
-	readonly exists: boolean;
-	readonly providerState: ResourceState | null;
-	readonly outputs: Record<string, unknown>;
+ readonly resourceId: ResourceId;
+ readonly kind: ResourceKind;
+ readonly exists: boolean;
+ readonly providerState: ResourceState | null;
+ readonly outputs: Record<string, unknown>;
 }
 
 export interface ProviderPlanInput<ResourceState = unknown> {
-	readonly desiredResources: readonly ResourceDefinition[];
-	readonly discoveredResources: readonly DiscoveredResource<ResourceState>[];
+ readonly desiredResources: readonly ResourceDefinition[];
+ readonly discoveredResources: readonly DiscoveredResource<ResourceState>[];
 }
 
 export type PlanActionKind =
-	| 'create'
-	| 'update'
-	| 'replace'
-	| 'delete'
-	| 'noop';
+ | 'create'
+ | 'update'
+ | 'replace'
+ | 'delete'
+ | 'noop';
 
 export interface PlannedAction {
-	readonly actionId: string;
-	readonly resourceId: ResourceId;
-	readonly providerKind: ProviderKind;
-	readonly kind: PlanActionKind;
-	readonly reason: string;
-	readonly dependsOnActionIds: readonly string[];
-	readonly risk: 'low' | 'medium' | 'high';
-	readonly desiredState: unknown;
-	readonly currentState: unknown;
+ readonly actionId: string;
+ readonly resourceId: ResourceId;
+ readonly providerKind: ProviderKind;
+ readonly kind: PlanActionKind;
+ readonly reason: string;
+ readonly dependsOnActionIds: readonly string[];
+ readonly risk: 'low' | 'medium' | 'high';
+ readonly desiredState: unknown;
+ readonly currentState: unknown;
 }
 
 export interface ProviderApplyResult<ProviderOutput = unknown> {
-	readonly actionId: string;
-	readonly resourceId: ResourceId;
-	readonly success: boolean;
-	readonly message: string;
-	readonly output: ProviderOutput | null;
+ readonly actionId: string;
+ readonly resourceId: ResourceId;
+ readonly success: boolean;
+ readonly message: string;
+ readonly output: ProviderOutput | null;
 }
 ```
 
@@ -880,12 +886,12 @@ export interface ProviderApplyResult<ProviderOutput = unknown> {
 
 ```ts
 export interface Compiler {
-	compile(configSet: DeploymentConfigSet): Promise<CompilationResult>;
+ compile(configSet: DeploymentConfigSet): Promise<CompilationResult>;
 }
 
 export interface CompilationResult {
-	readonly diagnostics: readonly Diagnostic[];
-	readonly model: DeploymentModel | null;
+ readonly diagnostics: readonly Diagnostic[];
+ readonly model: DeploymentModel | null;
 }
 ```
 
@@ -893,12 +899,12 @@ export interface CompilationResult {
 
 ```ts
 export interface ConfigLoader {
-	load(deploymentRootPath: string): Promise<LoadedConfig>;
+ load(deploymentRootPath: string): Promise<LoadedConfig>;
 }
 
 export interface LoadedConfig {
-	readonly documents: readonly ConfigDocument[];
-	readonly diagnostics: readonly Diagnostic[];
+ readonly documents: readonly ConfigDocument[];
+ readonly diagnostics: readonly Diagnostic[];
 }
 ```
 
@@ -906,12 +912,12 @@ export interface LoadedConfig {
 
 ```ts
 export interface ConfigValidator {
-	validate(loadedConfig: LoadedConfig): Promise<ValidatedConfigResult>;
+ validate(loadedConfig: LoadedConfig): Promise<ValidatedConfigResult>;
 }
 
 export interface ValidatedConfigResult {
-	readonly diagnostics: readonly Diagnostic[];
-	readonly configSet: DeploymentConfigSet | null;
+ readonly diagnostics: readonly Diagnostic[];
+ readonly configSet: DeploymentConfigSet | null;
 }
 ```
 
@@ -919,24 +925,24 @@ export interface ValidatedConfigResult {
 
 ```ts
 export interface DeploymentPlan {
-	readonly metadata: DeploymentPlanMetadata;
-	readonly actions: readonly PlannedAction[];
-	readonly diagnostics: readonly Diagnostic[];
+ readonly metadata: DeploymentPlanMetadata;
+ readonly actions: readonly PlannedAction[];
+ readonly diagnostics: readonly Diagnostic[];
 }
 
 export interface DeploymentPlanMetadata {
-	readonly createdAtIso: string;
-	readonly configDigest: string;
-	readonly actionCount: number;
-	readonly destructiveActionCount: number;
+ readonly createdAtIso: string;
+ readonly configDigest: string;
+ readonly actionCount: number;
+ readonly destructiveActionCount: number;
 }
 
 export interface Planner {
-	createPlan(
-		model: DeploymentModel,
-		providers: ProviderRegistry,
-		context: ProviderContext,
-	): Promise<DeploymentPlan>;
+ createPlan(
+  model: DeploymentModel,
+  providers: ProviderRegistry,
+  context: ProviderContext,
+ ): Promise<DeploymentPlan>;
 }
 ```
 
@@ -944,19 +950,19 @@ export interface Planner {
 
 ```ts
 export interface ApplyResult {
-	readonly success: boolean;
-	readonly actionResults: readonly ProviderApplyResult[];
-	readonly healthResults: readonly HealthCheckResult[];
-	readonly diagnostics: readonly Diagnostic[];
+ readonly success: boolean;
+ readonly actionResults: readonly ProviderApplyResult[];
+ readonly healthResults: readonly HealthCheckResult[];
+ readonly diagnostics: readonly Diagnostic[];
 }
 
 export interface Executor {
-	applyPlan(
-		plan: DeploymentPlan,
-		model: DeploymentModel,
-		providers: ProviderRegistry,
-		context: ProviderContext,
-	): Promise<ApplyResult>;
+ applyPlan(
+  plan: DeploymentPlan,
+  model: DeploymentModel,
+  providers: ProviderRegistry,
+  context: ProviderContext,
+ ): Promise<ApplyResult>;
 }
 ```
 
@@ -964,8 +970,8 @@ export interface Executor {
 
 ```ts
 export interface ProviderRegistry {
-	get(providerKind: ProviderKind): Provider;
-	list(): readonly Provider[];
+ get(providerKind: ProviderKind): Provider;
+ list(): readonly Provider[];
 }
 ```
 
@@ -973,47 +979,47 @@ export interface ProviderRegistry {
 
 ```ts
 export interface Renderer<Input> {
-	render(input: Input): RenderedArtifact;
+ render(input: Input): RenderedArtifact;
 }
 
 export interface RenderedArtifact {
-	readonly content: string;
-	readonly contentHash: string;
+ readonly content: string;
+ readonly contentHash: string;
 }
 
 export interface SystemdUnitRenderInput {
-	readonly unitName: string;
-	readonly description: string;
-	readonly serviceUser: string;
-	readonly workingDirectory: string;
-	readonly environmentFilePath: string | null;
-	readonly execStart: readonly string[];
-	readonly restartPolicy: 'no' | 'always' | 'on-failure';
+ readonly unitName: string;
+ readonly description: string;
+ readonly serviceUser: string;
+ readonly workingDirectory: string;
+ readonly environmentFilePath: string | null;
+ readonly execStart: readonly string[];
+ readonly restartPolicy: 'no' | 'always' | 'on-failure';
 }
 
 export interface ComposeRenderInput {
-	readonly projectName: string;
-	readonly services: readonly ComposeService[];
-	readonly networks: readonly ComposeNetwork[];
-	readonly volumes: readonly ComposeVolume[];
+ readonly projectName: string;
+ readonly services: readonly ComposeService[];
+ readonly networks: readonly ComposeNetwork[];
+ readonly volumes: readonly ComposeVolume[];
 }
 
 export interface ComposeService {
-	readonly name: string;
-	readonly image: string;
-	readonly environment: Record<string, string>;
-	readonly ports: readonly string[];
-	readonly volumes: readonly string[];
-	readonly dependsOn: readonly string[];
+ readonly name: string;
+ readonly image: string;
+ readonly environment: Record<string, string>;
+ readonly ports: readonly string[];
+ readonly volumes: readonly string[];
+ readonly dependsOn: readonly string[];
 }
 
 export interface ComposeNetwork {
-	readonly name: string;
-	readonly internal: boolean;
+ readonly name: string;
+ readonly internal: boolean;
 }
 
 export interface ComposeVolume {
-	readonly name: string;
+ readonly name: string;
 }
 ```
 
@@ -1021,39 +1027,39 @@ export interface ComposeVolume {
 
 ```ts
 export interface StateSnapshot {
-	readonly runId: string;
-	readonly deploymentName: string;
-	readonly environmentName: string;
-	readonly configDigest: string;
-	readonly recordedAtIso: string;
-	readonly resources: readonly StateResourceRecord[];
+ readonly runId: string;
+ readonly deploymentName: string;
+ readonly environmentName: string;
+ readonly configDigest: string;
+ readonly recordedAtIso: string;
+ readonly resources: readonly StateResourceRecord[];
 }
 
 export interface StateResourceRecord {
-	readonly resourceId: ResourceId;
-	readonly providerKind: ProviderKind;
-	readonly kind: ResourceKind;
-	readonly externalId: string | null;
-	readonly desiredStateHash: string;
-	readonly outputs: Record<string, unknown>;
+ readonly resourceId: ResourceId;
+ readonly providerKind: ProviderKind;
+ readonly kind: ResourceKind;
+ readonly externalId: string | null;
+ readonly desiredStateHash: string;
+ readonly outputs: Record<string, unknown>;
 }
 
 export interface StateStore {
-	saveSnapshot(snapshot: StateSnapshot): Promise<void>;
-	loadLatestSnapshot(
-		deploymentName: string,
-		environmentName: string,
-	): Promise<StateSnapshot | null>;
-	recordAuditEvent(event: AuditEvent): Promise<void>;
+ saveSnapshot(snapshot: StateSnapshot): Promise<void>;
+ loadLatestSnapshot(
+  deploymentName: string,
+  environmentName: string,
+ ): Promise<StateSnapshot | null>;
+ recordAuditEvent(event: AuditEvent): Promise<void>;
 }
 
 export interface AuditEvent {
-	readonly runId: string;
-	readonly timestampIso: string;
-	readonly eventType: string;
-	readonly message: string;
-	readonly resourceId: string | null;
-	readonly detail: Record<string, unknown>;
+ readonly runId: string;
+ readonly timestampIso: string;
+ readonly eventType: string;
+ readonly message: string;
+ readonly resourceId: string | null;
+ readonly detail: Record<string, unknown>;
 }
 ```
 
@@ -1061,10 +1067,10 @@ export interface AuditEvent {
 
 ```ts
 export interface Logger {
-	debug(message: string, detail?: Record<string, unknown>): void;
-	info(message: string, detail?: Record<string, unknown>): void;
-	warn(message: string, detail?: Record<string, unknown>): void;
-	error(message: string, detail?: Record<string, unknown>): void;
+ debug(message: string, detail?: Record<string, unknown>): void;
+ info(message: string, detail?: Record<string, unknown>): void;
+ warn(message: string, detail?: Record<string, unknown>): void;
+ error(message: string, detail?: Record<string, unknown>): void;
 }
 ```
 
