@@ -51,6 +51,8 @@ export interface SystemConfigDocument extends ConfigDocumentBase {
 			readonly guildId: string | SecretReference;
 			readonly channelId: string | SecretReference;
 			readonly allowedUserIds: readonly (string | SecretReference)[];
+			readonly typingIndicator?: boolean;
+			readonly threadPerSession?: boolean;
 		};
 	};
 }
@@ -178,6 +180,7 @@ export interface VultrProviderConfig {
 }
 
 export interface CloudflareProviderConfig {
+	readonly accountId: StringValue;
 	readonly zoneId: StringValue;
 	readonly apiToken: SecretReference;
 }
@@ -185,6 +188,12 @@ export interface CloudflareProviderConfig {
 export interface OvhProviderConfig {
 	readonly baseUrl: string;
 	readonly apiKey: SecretReference;
+}
+
+export interface DeploymentTargetConfig {
+	readonly instanceName: string;
+	readonly sshUser: string;
+	readonly sshPort: number;
 }
 
 export interface TunnelConfigDocument extends ConfigDocumentBase {
@@ -310,6 +319,20 @@ export interface CompileError {
 	readonly sourcePath?: string;
 }
 
+export interface ValidationIssue {
+	readonly code: string;
+	readonly message: string;
+	readonly severity: 'error' | 'warning';
+	readonly documentKind?: ConfigDocumentKind;
+	readonly sourcePath?: string;
+}
+
+export interface ConfigValidationResult {
+	readonly issues: readonly ValidationIssue[];
+	readonly errors: readonly ValidationIssue[];
+	readonly warnings: readonly ValidationIssue[];
+}
+
 export interface ResourceGraph {
 	readonly resources: readonly ResourceDefinition[];
 	readonly resourceIds: ReadonlySet<string>;
@@ -335,6 +358,10 @@ export interface CompilerContext {
 
 export interface ConfigCompiler {
 	compile(context: CompilerContext): CompileResult;
+}
+
+export interface ConfigValidator {
+	validate(loadedConfig: LoadedConfig): ConfigValidationResult;
 }
 
 export interface RawYamlDocument {

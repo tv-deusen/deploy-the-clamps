@@ -321,6 +321,7 @@ const providersConfigSchema = z
 			.optional(),
 		cloudflare: z
 			.object({
+				account_id: stringValueSchema,
 				zone_id: stringValueSchema,
 				api_token: stringValueSchema,
 			})
@@ -362,6 +363,10 @@ export class StrictConfigDocumentParser implements ConfigDocumentParser {
 			case 'workers':
 				return this.parseWorkersDocument(input);
 		}
+
+		throw new Error(
+			`Unsupported config document kind "${documentKind}" for "${input.sourcePath}".`,
+		);
 	}
 
 	private inferDocumentKind(sourcePath: string): ConfigDocumentKind {
@@ -408,6 +413,8 @@ export class StrictConfigDocumentParser implements ConfigDocumentParser {
 					environment: normalizedInput.app.environment,
 					logLevel: normalizedInput.app.log_level,
 					adminPort: normalizedInput.app.admin_port,
+					gatewayHost: '127.0.0.1',
+					gatewayPort: 3000,
 				},
 				inference: {
 					provider: normalizedInput.inference.provider,
@@ -783,6 +790,7 @@ export class StrictConfigDocumentParser implements ConfigDocumentParser {
 		input: NonNullable<ProvidersConfigInput['cloudflare']>,
 	): CloudflareProviderConfig {
 		return {
+			accountId: this.normalizeStringValue(input.account_id),
 			zoneId: this.normalizeStringValue(input.zone_id),
 			apiToken: this.normalizeSecretReference(input.api_token),
 		};

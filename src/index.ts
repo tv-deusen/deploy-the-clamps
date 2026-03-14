@@ -9,10 +9,6 @@ type CliOptions = {
 	arguments: string[];
 };
 
-type CommandContext = {
-	deploymentRootPath: string;
-};
-
 const supportedCommands: readonly CommandName[] = [
 	'help',
 	'validate',
@@ -83,13 +79,19 @@ function printHelp(): void {
 	);
 }
 
-async function runValidateCommand(arguments_: readonly string[]): Promise<number> {
+async function runValidateCommand(
+	arguments_: readonly string[],
+): Promise<number> {
 	const deploymentRootPath = getDeploymentRootPath(arguments_);
 	const engine = new DeploymentEngine();
 	const snapshot = await engine.validate(deploymentRootPath);
 
-	console.log(`Validated ${snapshot.loadedConfig.documents.length} document(s).`);
-	console.log(`Compiled ${snapshot.compileResult.graph.resources.length} resource(s).`);
+	console.log(
+		`Validated ${snapshot.loadedConfig.documents.length} document(s).`,
+	);
+	console.log(
+		`Compiled ${snapshot.compileResult.graph.resources.length} resource(s).`,
+	);
 
 	if (snapshot.compileResult.warnings.length > 0) {
 		console.log('');
@@ -123,7 +125,10 @@ async function runPlanCommand(arguments_: readonly string[]): Promise<number> {
 		console.log(`  ${change.reason}`);
 	}
 
-	if (plan.warnings.length > 0 || snapshot.compileResult.warnings.length > 0) {
+	if (
+		plan.warnings.length > 0 ||
+		snapshot.compileResult.warnings.length > 0
+	) {
 		console.log('');
 		console.log('Warnings:');
 
@@ -151,46 +156,6 @@ async function runDoctorCommand(
 	await Promise.resolve(arguments_);
 	console.log('doctor: not implemented yet');
 	return 0;
-}
-
-function parseCommandArguments(arguments_: readonly string[]): CommandContext {
-	let deploymentRootPath = process.cwd();
-
-	for (
-		let argumentIndex = 0;
-		argumentIndex < arguments_.length;
-		argumentIndex += 1
-	) {
-		const argument = arguments_[argumentIndex];
-
-		if (argument === '--root') {
-			const rootPath = arguments_[argumentIndex + 1];
-
-			if (!rootPath) {
-				throw new Error('Missing value for "--root".');
-			}
-
-			deploymentRootPath = resolve(rootPath);
-			argumentIndex += 1;
-			continue;
-		}
-
-		throw new Error(`Unknown option "${argument}".`);
-	}
-
-	return {
-		deploymentRootPath,
-	};
-}
-
-async function loadConfig(context: CommandContext) {
-	const loader = new DefaultConfigLoader({
-		pathResolver: new FilesystemConfigPathResolver(),
-		fileReader: new NodeConfigFileReader(),
-		documentParser: createConfigDocumentParser(),
-	});
-
-	return await loader.load(context.deploymentRootPath);
 }
 
 function getDeploymentRootPath(arguments_: readonly string[]): string {
