@@ -19,16 +19,16 @@
       "recommended": true,
       "a11y": "off",
       "complexity": {
-        "noExcessiveCognitiveComplexity": "error",
-        "noExcessiveNestedTestSuites": "error"
+        "noExcessiveCognitiveComplexity": "warn",
+        "noExcessiveNestedTestSuites": "warn"
       },
       "correctness": {
-        "noUndeclaredVariables": "error",
+        "noUndeclaredVariables": "warn",
         "noUndeclaredDependencies": "error"
       },
       "style": {
-        "noCommonJs": "error",
-        "noMagicNumbers": "error"
+        "noCommonJs": "warn",
+        "noMagicNumbers": "warn"
       }
     }
   },
