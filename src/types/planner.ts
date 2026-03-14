@@ -3,6 +3,7 @@ export type PlannerAction = 'create' | 'update' | 'replace' | 'delete' | 'noop';
 export type PlanRiskLevel = 'low' | 'medium' | 'high';
 
 export interface PlanResourceRef {
+	readonly id: string;
 	readonly type: string;
 	readonly name: string;
 	readonly provider: string;

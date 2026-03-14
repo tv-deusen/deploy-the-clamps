@@ -48,6 +48,33 @@ test('main plan command prints tunnel resources for a valid deployment root', as
 	}
 });
 
+test('main apply command reports failure details when provider apply fails', async () => {
+	const deploymentRootPath = await createDeploymentFixture();
+	const originalLog = console.log;
+	const capturedLines: string[] = [];
+
+	console.log = (...values: unknown[]) => {
+		capturedLines.push(values.join(' '));
+	};
+
+	try {
+		const exitCode = await main(['apply', deploymentRootPath]);
+
+		expect(exitCode).toBe(1);
+		expect(capturedLines.some((line) => line.includes('Apply failed.'))).toBe(
+			true,
+		);
+		expect(
+			capturedLines.some((line) => line.includes('Failed action: CREATE')),
+		).toBe(true);
+		expect(
+			capturedLines.some((line) => line.includes('Pending actions:')),
+		).toBe(true);
+	} finally {
+		console.log = originalLog;
+	}
+});
+
 async function createDeploymentFixture(): Promise<string> {
 	const deploymentRootPath = await mkdtemp(join(tmpdir(), 'dt-clamps-'));
 

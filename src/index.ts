@@ -145,9 +145,64 @@ async function runPlanCommand(arguments_: readonly string[]): Promise<number> {
 }
 
 async function runApplyCommand(arguments_: readonly string[]): Promise<number> {
-	await Promise.resolve(arguments_);
-	console.log('apply: not implemented yet');
-	return 0;
+	const deploymentRootPath = getDeploymentRootPath(arguments_);
+	const engine = new DeploymentEngine();
+	const execution = await engine.apply(deploymentRootPath);
+	const { snapshot, plan } = execution;
+
+	console.log(
+		`Apply for ${snapshot.compileResult.deployment.name} (${snapshot.compileResult.deployment.environment})`,
+	);
+	console.log(
+		`Resources: ${snapshot.compileResult.graph.resources.length}, planned changes: ${plan.summary.changeCount}`,
+	);
+	console.log('');
+
+	for (const change of execution.orderedChanges) {
+		console.log(
+			`${change.action.toUpperCase()} ${change.resource.type} ${change.resource.name} [${change.resource.provider}]`,
+		);
+	}
+
+	if (execution.success) {
+		const changedCount = execution.steps.filter(
+			(step) => step.result.changed,
+		).length;
+
+		console.log('');
+		console.log(
+			`Apply completed successfully. Executed ${execution.steps.length} action(s), changed ${changedCount}.`,
+		);
+
+		return 0;
+	}
+
+	const failure = execution.failure;
+
+	if (!failure) {
+		return 1;
+	}
+
+	console.log('');
+	console.log('Apply failed.');
+	console.log(
+		`Failed action: ${failure.failedChange.action.toUpperCase()} ${failure.failedChange.resource.type} ${failure.failedChange.resource.name} [${failure.failedChange.resource.provider}]`,
+	);
+	console.log(`Error: ${failure.message}`);
+	console.log(`Applied actions: ${failure.appliedSteps.length}`);
+	console.log(`Pending actions: ${failure.pendingChanges.length}`);
+
+	if (failure.rollbackCandidates.length > 0) {
+		console.log('Rollback candidates (latest first):');
+
+		for (const candidate of failure.rollbackCandidates) {
+			console.log(
+				`- ${candidate.action.toUpperCase()} ${candidate.resource.type} ${candidate.resource.name} [${candidate.resource.provider}]`,
+			);
+		}
+	}
+
+	return 1;
 }
 
 async function runDoctorCommand(

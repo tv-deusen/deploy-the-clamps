@@ -212,6 +212,7 @@ export class DeploymentPlanner
 	}): PlannedChange {
 		return {
 			resource: {
+				id: input.resource.id,
 				type: input.resource.type,
 				name: input.resource.name,
 				provider: input.resource.provider,
@@ -224,6 +225,7 @@ export class DeploymentPlanner
 			dependencies: input.resource.dependsOn.map((dependencyId) => ({
 				type: 'dependsOn',
 				resource: {
+					id: dependencyId,
 					type: 'unknown',
 					name: dependencyId,
 					provider: 'internal',
