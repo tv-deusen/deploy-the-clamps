@@ -5,167 +5,220 @@ import { DeploymentEngine } from './engine/runtime.ts';
 type CommandName = 'help' | 'validate' | 'plan' | 'apply' | 'doctor';
 
 type CliOptions = {
-  command: CommandName;
-  arguments: string[];
+	command: CommandName;
+	arguments: string[];
+};
+
+type CommandContext = {
+	deploymentRootPath: string;
 };
 
 const supportedCommands: readonly CommandName[] = [
-  'help',
-  'validate',
-  'plan',
-  'apply',
-  'doctor',
+	'help',
+	'validate',
+	'plan',
+	'apply',
+	'doctor',
 ];
 
 export async function main(argv: readonly string[]): Promise<number> {
-  const options = parseCommandLineArguments(argv);
+	const options = parseCommandLineArguments(argv);
 
-  switch (options.command) {
-    case 'help':
-      printHelp();
-      return 0;
-    case 'validate':
-      return await runValidateCommand(options.arguments);
-    case 'plan':
-      return await runPlanCommand(options.arguments);
-    case 'apply':
-      return await runApplyCommand(options.arguments);
-    case 'doctor':
-      return await runDoctorCommand(options.arguments);
-  }
+	switch (options.command) {
+		case 'help':
+			printHelp();
+			return 0;
+		case 'validate':
+			return await runValidateCommand(options.arguments);
+		case 'plan':
+			return await runPlanCommand(options.arguments);
+		case 'apply':
+			return await runApplyCommand(options.arguments);
+		case 'doctor':
+			return await runDoctorCommand(options.arguments);
+	}
 }
 
 function parseCommandLineArguments(argv: readonly string[]): CliOptions {
-  const [rawCommand, ...remainingArguments] = argv;
+	const [rawCommand, ...remainingArguments] = argv;
 
-  if (!rawCommand || rawCommand === '--help' || rawCommand === '-h') {
-    return {
-      command: 'help',
-      arguments: [],
-    };
-  }
+	if (!rawCommand || rawCommand === '--help' || rawCommand === '-h') {
+		return {
+			command: 'help',
+			arguments: [],
+		};
+	}
 
-  if (isCommandName(rawCommand)) {
-    return {
-      command: rawCommand,
-      arguments: remainingArguments,
-    };
-  }
+	if (isCommandName(rawCommand)) {
+		return {
+			command: rawCommand,
+			arguments: remainingArguments,
+		};
+	}
 
-  throw new Error(
-    `Unknown command "${rawCommand}". Supported commands: ${supportedCommands.join(', ')}`,
-  );
+	throw new Error(
+		`Unknown command "${rawCommand}". Supported commands: ${supportedCommands.join(', ')}`,
+	);
 }
 
 function isCommandName(value: string): value is CommandName {
-  return supportedCommands.includes(value as CommandName);
+	return supportedCommands.includes(value as CommandName);
 }
 
 function printHelp(): void {
-  console.log('deploy-the-clamps');
-  console.log('');
-  console.log('Usage: bun run src/index.ts <command> [options]');
-  console.log('');
-  console.log('Commands:');
-  console.log('  help       Show this help output');
-  console.log('  validate   Validate deployment configuration');
-  console.log('  plan       Build and print a deployment plan');
-  console.log('  apply      Apply the deployment plan');
-  console.log('  doctor     Run environment and configuration diagnostics');
+	console.log('deploy-the-clamps');
+	console.log('');
+	console.log('Usage: bun run src/index.ts <command> [options]');
+	console.log('');
+	console.log('Commands:');
+	console.log('  help       Show this help output');
+	console.log('  validate   Validate deployment configuration');
+	console.log('  plan       Build and print a deployment plan');
+	console.log('  apply      Apply the deployment plan');
+	console.log('  doctor     Run environment and configuration diagnostics');
+	console.log('');
+	console.log('Options:');
+	console.log(
+		'  --root <path>   Path to the deployment directory containing config/',
+	);
 }
 
 async function runValidateCommand(arguments_: readonly string[]): Promise<number> {
-  const deploymentRootPath = getDeploymentRootPath(arguments_);
-  const engine = new DeploymentEngine();
-  const snapshot = await engine.validate(deploymentRootPath);
+	const deploymentRootPath = getDeploymentRootPath(arguments_);
+	const engine = new DeploymentEngine();
+	const snapshot = await engine.validate(deploymentRootPath);
 
-  console.log(`Validated ${snapshot.loadedConfig.documents.length} document(s).`);
-  console.log(`Compiled ${snapshot.compileResult.graph.resources.length} resource(s).`);
+	console.log(`Validated ${snapshot.loadedConfig.documents.length} document(s).`);
+	console.log(`Compiled ${snapshot.compileResult.graph.resources.length} resource(s).`);
 
-  if (snapshot.compileResult.warnings.length > 0) {
-    console.log('');
-    console.log('Warnings:');
+	if (snapshot.compileResult.warnings.length > 0) {
+		console.log('');
+		console.log('Warnings:');
 
-    for (const warning of snapshot.compileResult.warnings) {
-      console.log(`- [${warning.code}] ${warning.message}`);
-    }
-  }
+		for (const warning of snapshot.compileResult.warnings) {
+			console.log(`- [${warning.code}] ${warning.message}`);
+		}
+	}
 
-  return 0;
+	return 0;
 }
 
 async function runPlanCommand(arguments_: readonly string[]): Promise<number> {
-  const deploymentRootPath = getDeploymentRootPath(arguments_);
-  const engine = new DeploymentEngine();
-  const { snapshot, plan } = await engine.plan(deploymentRootPath);
+	const deploymentRootPath = getDeploymentRootPath(arguments_);
+	const engine = new DeploymentEngine();
+	const { snapshot, plan } = await engine.plan(deploymentRootPath);
 
-  console.log(
-    `Plan for ${snapshot.compileResult.deployment.name} (${snapshot.compileResult.deployment.environment})`,
-  );
-  console.log(
-    `Resources: ${snapshot.compileResult.graph.resources.length}, changes: ${plan.summary.changeCount}`,
-  );
-  console.log('');
+	console.log(
+		`Plan for ${snapshot.compileResult.deployment.name} (${snapshot.compileResult.deployment.environment})`,
+	);
+	console.log(
+		`Resources: ${snapshot.compileResult.graph.resources.length}, changes: ${plan.summary.changeCount}`,
+	);
+	console.log('');
 
-  for (const change of plan.changes) {
-    console.log(
-      `${change.action.toUpperCase()} ${change.resource.type} ${change.resource.name} [${change.resource.provider}]`,
-    );
-    console.log(`  ${change.reason}`);
-  }
+	for (const change of plan.changes) {
+		console.log(
+			`${change.action.toUpperCase()} ${change.resource.type} ${change.resource.name} [${change.resource.provider}]`,
+		);
+		console.log(`  ${change.reason}`);
+	}
 
-  if (plan.warnings.length > 0 || snapshot.compileResult.warnings.length > 0) {
-    console.log('');
-    console.log('Warnings:');
+	if (plan.warnings.length > 0 || snapshot.compileResult.warnings.length > 0) {
+		console.log('');
+		console.log('Warnings:');
 
-    for (const warning of snapshot.compileResult.warnings) {
-      console.log(`- [compile] ${warning.message}`);
-    }
+		for (const warning of snapshot.compileResult.warnings) {
+			console.log(`- [compile] ${warning.message}`);
+		}
 
-    for (const warning of plan.warnings) {
-      console.log(`- [plan] ${warning}`);
-    }
-  }
+		for (const warning of plan.warnings) {
+			console.log(`- [plan] ${warning}`);
+		}
+	}
 
-  return 0;
+	return 0;
 }
 
 async function runApplyCommand(arguments_: readonly string[]): Promise<number> {
-  await Promise.resolve(arguments_);
-  console.log('apply: not implemented yet');
-  return 0;
+	await Promise.resolve(arguments_);
+	console.log('apply: not implemented yet');
+	return 0;
 }
 
-async function runDoctorCommand(arguments_: readonly string[]): Promise<number> {
-  await Promise.resolve(arguments_);
-  console.log('doctor: not implemented yet');
-  return 0;
+async function runDoctorCommand(
+	arguments_: readonly string[],
+): Promise<number> {
+	await Promise.resolve(arguments_);
+	console.log('doctor: not implemented yet');
+	return 0;
+}
+
+function parseCommandArguments(arguments_: readonly string[]): CommandContext {
+	let deploymentRootPath = process.cwd();
+
+	for (
+		let argumentIndex = 0;
+		argumentIndex < arguments_.length;
+		argumentIndex += 1
+	) {
+		const argument = arguments_[argumentIndex];
+
+		if (argument === '--root') {
+			const rootPath = arguments_[argumentIndex + 1];
+
+			if (!rootPath) {
+				throw new Error('Missing value for "--root".');
+			}
+
+			deploymentRootPath = resolve(rootPath);
+			argumentIndex += 1;
+			continue;
+		}
+
+		throw new Error(`Unknown option "${argument}".`);
+	}
+
+	return {
+		deploymentRootPath,
+	};
+}
+
+async function loadConfig(context: CommandContext) {
+	const loader = new DefaultConfigLoader({
+		pathResolver: new FilesystemConfigPathResolver(),
+		fileReader: new NodeConfigFileReader(),
+		documentParser: createConfigDocumentParser(),
+	});
+
+	return await loader.load(context.deploymentRootPath);
 }
 
 function getDeploymentRootPath(arguments_: readonly string[]): string {
-  const [rawPath] = arguments_;
+	const [rawPath] = arguments_;
 
-  if (!rawPath) {
-    throw new Error(
-      'A deployment root path is required. Example: bun run src/index.ts validate ./deploy',
-    );
-  }
+	if (!rawPath) {
+		throw new Error(
+			'A deployment root path is required. Example: bun run src/index.ts validate ./deploy',
+		);
+	}
 
-  return resolve(rawPath);
+	return resolve(rawPath);
 }
 
 async function runFromProcess(argv: readonly string[]): Promise<void> {
-  try {
-    const exitCode = await main(argv);
-    process.exitCode = exitCode;
-  } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : 'An unknown CLI error occurred';
-    console.error(message);
-    process.exitCode = 1;
-  }
+	try {
+		const exitCode = await main(argv);
+		process.exitCode = exitCode;
+	} catch (error: unknown) {
+		const message =
+			error instanceof Error
+				? error.message
+				: 'An unknown CLI error occurred';
+		console.error(message);
+		process.exitCode = 1;
+	}
 }
 
 if (import.meta.main) {
-  void runFromProcess(process.argv.slice(2));
+	void runFromProcess(process.argv.slice(2));
 }

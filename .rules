@@ -91,6 +91,14 @@
 * Prefer fixing the root cause over suppressing lint or type errors.
 * Do not disable rules without a clear, local justification.
 
+# Change hygiene
+
+For every task that changes the codebase, the agent must test the changes and commit them to git before ending the turn.
+
+Do not leave large uncommitted or partially tracked changes behind. In particular, do not end a turn with a large diff that includes many modified files or substantial untracked files.
+
+If the work grows beyond a small change — for example, it touches multiple files and is more than about 100 lines — split the work into multiple focused commits with coherent scopes.
+
 # Pull request hygiene
 
 When an agent opens or updates a pull request, it must:
