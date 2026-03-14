@@ -374,3 +374,7 @@ function assertHostResource(
 function assertNever(value: never): never {
   throw new Error(`Unhandled host provider state: ${JSON.stringify(value)}`);
 }
+
+export function createHostProvider(): HostProvider {
+  return new HostProvider();
+}

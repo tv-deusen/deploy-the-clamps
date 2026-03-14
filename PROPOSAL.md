@@ -7,6 +7,7 @@ The architecture is a layered stack where each layer's behavior is declared via 
 ## Declarative-First Philosophy
 
 **Principles:**
+
 - **Single source of truth**: All configuration lives in version-controlled YAML files
 - **Validation before deployment**: Config is checked for validity and consistency before any service starts
 - **Immutable deployments**: Each deployment is a snapshot of config files; rolling back means reverting commits
@@ -18,10 +19,9 @@ The architecture is a layered stack where each layer's behavior is declared via 
 
 ```
 Your machine
-  → Cloudflare DNS (naming only)
-  → Vultr public IP
-  → Vultr firewall + UFW (source-IP allowlist)
-  → Caddy reverse proxy (TLS, routing)
+  → Cloudflare Access
+  → Cloudflare Tunnel edge
+  → cloudflared on Vultr host
   → OpenClaw runtime (systemd, declaratively configured)
        → OVH AI Endpoints (inference)
        → Discord gateway (messaging)
@@ -43,6 +43,7 @@ deploy/
 │   ├── inference.yaml          # Model assignments
 │   ├── memory.yaml             # Graphiti and persistence
 │   ├── discord.yaml            # Discord bot settings
+│   ├── tunnel.yaml             # Cloudflare Tunnel publication
 │   ├── docker-compose.yaml     # Graphiti + FalkorDB stack
 │   └── secrets.env.example     # Secrets template (→ .env on deployment)
 ├── scripts/
@@ -53,7 +54,7 @@ deploy/
 ├── systemd/
 │   ├── openclaw.service        # Generated from config
 │   ├── openclaw-cluster.target # Generated from config
-│   └── caddy.service           # Generated from config
+│   └── cloudflared.service     # Generated from config
 └── .gitignore                  # Excludes secrets, local state
 ```
 
@@ -71,6 +72,8 @@ app:
   environment: production
   log_level: info
   admin_port: 9999              # Admin API, localhost only
+  gateway_host: 127.0.0.1       # Gateway is not exposed directly
+  gateway_port: 3000
 
 inference:
   provider: ovh
@@ -143,6 +146,27 @@ concurrency:
   max_concurrent_tools: 3       # Never run more than 3 tools at once
   max_per_worker: 2             # Max 2 concurrent requests to any one worker
   tool_call_timeout_ms: 30000   # Total timeout for any tool call
+```
+
+### tunnel.yaml — Cloudflare Publication
+
+```yaml
+version: '1.0'
+
+tunnel:
+  provider: cloudflare
+  enabled: true
+  service: cloudflared
+  ingress:
+    hostname: gateway.example.com
+    service: http://127.0.0.1:3000
+  access:
+    enabled: true
+    policy: one-user-admin
+    allowed_emails:
+      - you@example.com
+  origin_request:
+    no_tls_verify: false
 ```
 
 ### workers.yaml — Specialized Processes
@@ -356,6 +380,7 @@ DISCORD_USER_ID=111111111
 GRAPHITI_LLM_MODEL=claude-3-haiku-20240307
 GRAPHITI_EMBEDDING_MODEL=nomic-embed-text-v1.5
 ADMIN_API_TOKEN=randomly-generated-token-here
+CLOUDFLARE_TUNNEL_TOKEN=cloudflare-tunnel-token-here
 ```
 
 ## Deployment Pipeline
@@ -384,6 +409,11 @@ for section in app inference memory discord; do
     exit 1
   fi
 done
+
+if ! grep -q "^tunnel:" config/tunnel.yaml; then
+  echo "ERROR: Missing [tunnel] in tunnel.yaml"
+  exit 1
+fi
 
 # Validate worker definitions
 echo "Checking worker scripts exist..."
@@ -518,7 +548,7 @@ set -e
 echo "Performing health checks..."
 
 # Check systemd services
-for service in openclaw.service worker-code.service; do
+for service in openclaw.service worker-code.service cloudflared.service; do
   if systemctl is-active --quiet "$service"; then
     echo "  ✓ $service is running"
   else
@@ -671,6 +701,7 @@ The system validates config files at every stage.
 ### Consistency Checks
 
 Before deployment, the system checks:
+
 - All referenced worker scripts exist
 - All tool worker dependencies have matching workers defined
 - No circular dependencies between tools/workers
@@ -746,8 +777,8 @@ bash scripts/deploy.sh
 
 ## Recommended Solution Summary
 
-- **Vultr Ubuntu VM** with public IP, firewalled to your source IP only
-- **Caddy** reverse proxy for TLS and routing
+- **Vultr Ubuntu VM** with a public IP used for administration and outbound connectivity
+- **Cloudflare Tunnel + Access** on the free plan for gateway publication and identity-based access control
 - **OpenClaw** on host under systemd (not Docker)
 - **Graphiti + FalkorDB** in Docker on private network
 - **Discord** as the primary interaction surface

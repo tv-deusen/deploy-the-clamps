@@ -2,6 +2,9 @@ export type ProviderName = 'cloudflare' | 'docker' | 'host' | 'ovh' | 'vultr';
 
 export type ResourceType =
   | 'cloudflare_dns_record'
+  | 'cloudflare_tunnel'
+  | 'cloudflare_access_application'
+  | 'cloudflare_access_policy'
   | 'docker_compose_stack'
   | 'docker_network'
   | 'docker_volume'

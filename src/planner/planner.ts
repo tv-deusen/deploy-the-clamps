@@ -56,13 +56,18 @@ export class DeploymentPlanner
   public async createPlanFromCompileResult(
     input: CreateDeploymentPlanInput,
   ): Promise<DeploymentPlan> {
-    return await this.createPlanFromGraph(input.compileResult.graph);
+    const context = this.createProviderPlanContext({
+      deploymentName: input.compileResult.deployment.name,
+      environmentName: input.compileResult.deployment.environment,
+    });
+
+    return await this.createPlanFromGraph(input.compileResult.graph, context);
   }
 
   public async createPlanFromGraph(
     desiredGraph: ResourceGraph,
+    context: ProviderPlanContext = this.createProviderPlanContext(),
   ): Promise<DeploymentPlan> {
-    const context = this.createProviderPlanContext();
     const resourceGroups = this.groupResourcesByProvider(desiredGraph.resources);
     const plannedChanges: PlannedChange[] = [];
     const warnings: string[] = [];
@@ -111,10 +116,12 @@ export class DeploymentPlanner
     };
   }
 
-  private createProviderPlanContext(): ProviderPlanContext {
+  private createProviderPlanContext(
+    override: Partial<ProviderPlanContext> = {},
+  ): ProviderPlanContext {
     return {
-      deploymentName: 'default',
-      environmentName: 'default',
+      deploymentName: override.deploymentName ?? 'default',
+      environmentName: override.environmentName ?? 'default',
     };
   }
 
@@ -288,6 +295,12 @@ export class DeploymentPlanner
     switch (resourceType) {
       case 'cloudflare.dns-record':
         return 'cloudflare_dns_record';
+      case 'cloudflare.tunnel':
+        return 'cloudflare_tunnel';
+      case 'cloudflare.access-application':
+        return 'cloudflare_access_application';
+      case 'cloudflare.access-policy':
+        return 'cloudflare_access_policy';
       case 'docker.compose-stack':
         return 'docker_compose_stack';
       case 'docker.network':

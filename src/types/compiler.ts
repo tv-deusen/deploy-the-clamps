@@ -4,6 +4,7 @@ export type ConfigDocumentKind =
   | 'workers'
   | 'memory'
   | 'network'
+  | 'tunnel'
   | 'providers'
   | 'deployment';
 
@@ -28,6 +29,8 @@ export interface SystemConfigDocument extends ConfigDocumentBase {
     readonly environment: string;
     readonly logLevel: 'debug' | 'info' | 'warn' | 'error';
     readonly adminPort: number;
+    readonly gatewayHost: string;
+    readonly gatewayPort: number;
   };
   readonly inference: {
     readonly provider: string;
@@ -148,6 +151,28 @@ export interface NetworkConfigDocument extends ConfigDocumentBase {
   };
 }
 
+export interface TunnelConfigDocument extends ConfigDocumentBase {
+  readonly kind: 'tunnel';
+  readonly provider: string;
+  readonly name: string;
+  readonly hostname: string;
+  readonly service: {
+    readonly target: 'openclaw-gateway' | 'url';
+    readonly url?: string;
+  };
+  readonly access: {
+    readonly enabled: boolean;
+    readonly applicationName: string;
+    readonly policyName: string;
+    readonly allowedEmails: readonly string[];
+    readonly sessionDuration: string;
+  };
+  readonly systemd: {
+    readonly unitName: string;
+    readonly configPath: string;
+  };
+}
+
 export interface ProvidersConfigDocument extends ConfigDocumentBase {
   readonly kind: 'providers';
   readonly vultr?: {
@@ -158,6 +183,7 @@ export interface ProvidersConfigDocument extends ConfigDocumentBase {
     readonly apiToken: SecretReference;
   };
   readonly cloudflare?: {
+    readonly accountId: string | SecretReference;
     readonly zoneId: string | SecretReference;
     readonly apiToken: SecretReference;
   };
@@ -184,6 +210,7 @@ export type ConfigDocument =
   | WorkersConfigDocument
   | MemoryConfigDocument
   | NetworkConfigDocument
+  | TunnelConfigDocument
   | ProvidersConfigDocument
   | DeploymentConfigDocument;
 
@@ -205,6 +232,9 @@ export type ResourceType =
   | 'vultr.instance'
   | 'vultr.firewall-group'
   | 'cloudflare.dns-record'
+  | 'cloudflare.tunnel'
+  | 'cloudflare.access-application'
+  | 'cloudflare.access-policy'
   | 'host.file'
   | 'host.directory'
   | 'host.systemd-unit'

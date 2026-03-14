@@ -1,3 +1,7 @@
+import { resolve } from 'node:path';
+
+import { DeploymentEngine } from './engine/runtime.ts';
+
 type CommandName = 'help' | 'validate' | 'plan' | 'apply' | 'doctor';
 
 type CliOptions = {
@@ -71,14 +75,58 @@ function printHelp(): void {
 }
 
 async function runValidateCommand(arguments_: readonly string[]): Promise<number> {
-  await Promise.resolve(arguments_);
-  console.log('validate: not implemented yet');
+  const deploymentRootPath = getDeploymentRootPath(arguments_);
+  const engine = new DeploymentEngine();
+  const snapshot = await engine.validate(deploymentRootPath);
+
+  console.log(`Validated ${snapshot.loadedConfig.documents.length} document(s).`);
+  console.log(`Compiled ${snapshot.compileResult.graph.resources.length} resource(s).`);
+
+  if (snapshot.compileResult.warnings.length > 0) {
+    console.log('');
+    console.log('Warnings:');
+
+    for (const warning of snapshot.compileResult.warnings) {
+      console.log(`- [${warning.code}] ${warning.message}`);
+    }
+  }
+
   return 0;
 }
 
 async function runPlanCommand(arguments_: readonly string[]): Promise<number> {
-  await Promise.resolve(arguments_);
-  console.log('plan: not implemented yet');
+  const deploymentRootPath = getDeploymentRootPath(arguments_);
+  const engine = new DeploymentEngine();
+  const { snapshot, plan } = await engine.plan(deploymentRootPath);
+
+  console.log(
+    `Plan for ${snapshot.compileResult.deployment.name} (${snapshot.compileResult.deployment.environment})`,
+  );
+  console.log(
+    `Resources: ${snapshot.compileResult.graph.resources.length}, changes: ${plan.summary.changeCount}`,
+  );
+  console.log('');
+
+  for (const change of plan.changes) {
+    console.log(
+      `${change.action.toUpperCase()} ${change.resource.type} ${change.resource.name} [${change.resource.provider}]`,
+    );
+    console.log(`  ${change.reason}`);
+  }
+
+  if (plan.warnings.length > 0 || snapshot.compileResult.warnings.length > 0) {
+    console.log('');
+    console.log('Warnings:');
+
+    for (const warning of snapshot.compileResult.warnings) {
+      console.log(`- [compile] ${warning.message}`);
+    }
+
+    for (const warning of plan.warnings) {
+      console.log(`- [plan] ${warning}`);
+    }
+  }
+
   return 0;
 }
 
@@ -94,6 +142,18 @@ async function runDoctorCommand(arguments_: readonly string[]): Promise<number> 
   return 0;
 }
 
+function getDeploymentRootPath(arguments_: readonly string[]): string {
+  const [rawPath] = arguments_;
+
+  if (!rawPath) {
+    throw new Error(
+      'A deployment root path is required. Example: bun run src/index.ts validate ./deploy',
+    );
+  }
+
+  return resolve(rawPath);
+}
+
 async function runFromProcess(argv: readonly string[]): Promise<void> {
   try {
     const exitCode = await main(argv);
@@ -106,4 +166,6 @@ async function runFromProcess(argv: readonly string[]): Promise<void> {
   }
 }
 
-void runFromProcess(process.argv.slice(2));
+if (import.meta.main) {
+  void runFromProcess(process.argv.slice(2));
+}
